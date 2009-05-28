@@ -1,0 +1,60 @@
+diff -r -u ./html-diff.lisp /Users/gwking/.asdf-install-dir/site/cl-html-diff_0.1/html-diff.lisp
+--- ./html-diff.lisp	2005-02-24 15:39:53.000000000 -0500
++++ /Users/gwking/.asdf-install-dir/site/cl-html-diff_0.1/html-diff.lisp	2006-05-10 13:44:44.000000000 -0400
+@@ -21,36 +21,49 @@
+ 
+ 
+ (defun html-diff (a b &key (insert-class "diff") (delete-class "diff") (replace-class "diff"))
+-  (with-output-to-string (out)
+-    (html-diff-to-stream out a b
+-			 :insert-class insert-class
+-			 :delete-class delete-class
+-			 :replace-class replace-class)))
++  (let (equal replace delete insert)
++    (values 
++     (with-output-to-string (out)
++       (setf (values equal replace delete insert)
++             (html-diff-to-stream out a b
++			          :insert-class insert-class
++			          :delete-class delete-class
++			          :replace-class replace-class)))
++     equal replace delete insert)))
+ 
+ 
+ (defun html-diff-to-stream (stream a b &key (insert-class "diff") (delete-class "diff") (replace-class "diff"))
+   "Takes two strings containing HTML and returns a human-readable
+   HTML diff.  Uses <ins>, <del> and some css classes"
+   (let ((a (tokenize-html a))
+-	(b (tokenize-html b)))
++	(b (tokenize-html b))
++        (replace 0)
++        (delete 0)
++        (insert 0)
++        (equal 0))
+     (dolist (op (html-get-opcodes a b))
+       (ecase (opcode-tag op)
+ 	((:replace)
++         (incf replace)
+ 	 (format stream "<del class=\"~A\">" replace-class)
+ 	 (join-to-stream stream (subseq a (opcode-i1 op) (opcode-i2 op)))
+ 	 (format stream "</del><ins class=\"~A\">" replace-class)
+ 	 (join-to-stream stream (subseq b (opcode-j1 op) (opcode-j2 op)))
+ 	 (format stream "</ins>"))
+ 	((:delete)
++         (incf delete)
+ 	 (format stream "<del class=\"~A\">" delete-class)
+ 	 (join-to-stream stream (subseq a (opcode-i1 op) (opcode-i2 op)))
+ 	 (format stream "</del>"))
+ 	((:insert)
++         (incf insert)
+ 	 (format stream "<ins class=\"~A\">" insert-class)
+ 	 (join-to-stream stream (subseq b (opcode-j1 op) (opcode-j2 op)))
+ 	 (format stream "</ins>"))
+ 	((:equal)
+-	 (join-to-stream stream (subseq b (opcode-j1 op) (opcode-j2 op))))))))
++         (incf equal)
++	 (join-to-stream stream (subseq b (opcode-j1 op) (opcode-j2 op))))))
++    (values equal replace delete insert)))
+ 
+ 
+ (defun join (seq)
